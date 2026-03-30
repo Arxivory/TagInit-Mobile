@@ -51,3 +51,12 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+export const THERMAL_THEME = {
+  background: '#000000',
+  accent: '#FF4D00', // Heat intensity orange
+  // Inferno colors for mapping 10m thermal pixels
+  palette: ['#000004', '#420a68', '#932667', '#dd513a', '#fca636', '#fcffa4'],
+  text: '#FFFFFF',
+  textDim: '#666666',
+};
