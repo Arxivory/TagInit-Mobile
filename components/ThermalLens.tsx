@@ -6,12 +6,10 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 export const ThermalLens = () => {
   return (
     <View style={styles.container}>
-      {/* 1. Scaled Viewport: 25% zoom for street-level urban morphology */}
       <View style={styles.cameraWrapper}>
         <CameraView style={StyleSheet.absoluteFill} facing="back" />
       </View>
 
-      {/* 2. Layered Heatmap Overlay (No Filters = No Crash) */}
       <Svg height="100%" width="100%" style={StyleSheet.absoluteFill}>
         <Defs>
           <RadialGradient id="innerHeat" cx="50%" cy="50%" rx="50%" ry="50%">
@@ -25,10 +23,8 @@ export const ThermalLens = () => {
           </RadialGradient>
         </Defs>
 
-        {/* Outer broad heat dissipating into the environment */}
         <Rect x="5%" y="15%" width="90%" height="60%" fill="url(#outerGlow)" />
 
-        {/* Inner intense heat localized on structures like G.I. roofs */}
         <Rect x="20%" y="25%" width="60%" height="40%" fill="url(#innerHeat)" />
       </Svg>
     </View>

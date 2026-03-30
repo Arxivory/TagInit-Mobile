@@ -18,7 +18,6 @@ export default function App() {
   useEffect(() => {
     if (!permission?.granted) requestPermission();
 
-    // Fetch GPS on startup
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
