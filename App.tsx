@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker"; // New Import
 import * as Location from "expo-location";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -27,8 +28,8 @@ export default function App() {
   const [material, setMaterial] = useState("ASPHALT");
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [heatmap, setHeatmap] = useState<number[][] | undefined>(undefined);
-  const cameraRef = useRef<CameraView>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
 
   const toggleMode = () => {
     if (capturedImage) {
@@ -53,60 +54,74 @@ export default function App() {
     })();
   }, [permission]);
 
-  const handleSnapshot = async () => {
-    if (!cameraRef.current) {
-      Alert.alert("Error", "Camera not ready");
-      return;
-    }
-
+  const processImageInference = async (uri: string) => {
+    setIsAnalyzing(true);
     try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.5,
-        base64: false,
-      });
-
-      setCapturedImage(photo.uri);
-      setIsAnalyzing(true);
-
-      if (photo) {
-        const result = await runThermalInference(photo.uri, material, location);
-
-        if (result) {
-          setHeatmap(result.temperatureMap);
-          setStats((prevStats) => ({
-            current: result.maxTemp.toString(),
-            previous: prevStats.current,
-            max: result.maxTemp.toString(),
-            min: result.minTemp.toString(),
-            variance: (result.maxTemp - result.minTemp).toFixed(2),
-          }));
-
-          captureThermalSnapshot(result, location, material);
-        } else {
-          Alert.alert("Connection Error", "Check your Python terminal.");
-        }
+      const result = await runThermalInference(uri, material, location);
+      if (result) {
+        setHeatmap(result.temperatureMap);
+        setStats((prevStats) => ({
+          current: result.maxTemp.toString(),
+          previous: prevStats.current,
+          max: result.maxTemp.toString(),
+          min: result.minTemp.toString(),
+          variance: (result.maxTemp - result.minTemp).toFixed(2),
+        }));
+        captureThermalSnapshot(result, location, material);
+      } else {
+        Alert.alert("Connection Error", "Check your Python terminal.");
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Snapshot Failed", "Check hardware connections.");
+      Alert.alert("Analysis Failed", "Check server connection.");
     } finally {
       setIsAnalyzing(false);
     }
   };
 
+  const handleSnapshot = async () => {
+    if (!cameraRef.current) {
+      Alert.alert("Error", "Camera not ready");
+      return;
+    }
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.5,
+        base64: false,
+      });
+      setCapturedImage(photo.uri);
+      await processImageInference(photo.uri);
+    } catch (e) {
+      Alert.alert("Camera Error", "Failed to capture image.");
+    }
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Denied", "Gallery access is required.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setCapturedImage(result.assets[0].uri);
+      await processImageInference(result.assets[0].uri);
+    }
+  };
+
   const getRecommendation = () => {
     const temp = parseFloat(stats.max);
-
     if (material === "ASPHALT" && temp > 45)
       return "Significant Heat Island risk. Recommend permeable paving.";
-    if (material === "G.I. SHEET" && temp > 40)
+    if (material === "G.I. SHEET" || (material === "GI_SHEET" && temp > 40))
       return "High conduction. Consider reflective coating (Cool Roof).";
-    if (material === "CONCRETE" && temp > 38)
-      return "Concrete heat absorption detected. Suggest lighter finishes.";
-    if (material === "GREEN ROOF")
-      return "Excellent mitigation. Encourage wider adoption.";
     if (temp < 35) return "Optimal thermal profile for this surface material.";
-
     return "Analyzing thermal patterns for urban mitigation...";
   };
 
@@ -125,7 +140,7 @@ export default function App() {
         style={[
           styles.fab,
           capturedImage ? styles.fabReset : styles.fabCapture,
-          isAnalyzing && { opacity: 0.8 },
+          isAnalyzing && { opacity: 0.6 },
         ]}
         onPress={toggleMode}
         disabled={isAnalyzing}
@@ -135,7 +150,7 @@ export default function App() {
         ) : (
           <Ionicons
             name={capturedImage ? "refresh" : "aperture"}
-            size={35}
+            size={38}
             color="white"
           />
         )}
@@ -149,7 +164,7 @@ export default function App() {
         />
       </View>
 
-      {capturedImage && (
+      {capturedImage && !isAnalyzing && (
         <View style={styles.insightCard}>
           <View style={styles.insightRow}>
             <Ionicons name="analytics" size={20} color="#FF4500" />
@@ -170,7 +185,11 @@ export default function App() {
       )}
 
       {!capturedImage && (
-        <DataDrawer activeMaterial={material} setMaterial={setMaterial} />
+        <DataDrawer
+          activeMaterial={material}
+          setMaterial={setMaterial}
+          onUpload={pickImage}
+        />
       )}
     </View>
   );
@@ -181,27 +200,27 @@ const styles = StyleSheet.create({
   overlay: { position: "absolute", top: 60, left: 20, right: 20 },
   fab: {
     position: "absolute",
-    bottom: 100,
+    bottom: 130,
     alignSelf: "center",
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 8,
+    elevation: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    zIndex: 10,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    zIndex: 100,
   },
   fabCapture: {
     backgroundColor: "#FF4500",
     borderWidth: 4,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(255,255,255,0.3)",
   },
   fabReset: {
-    backgroundColor: "#333",
+    backgroundColor: "#222",
     borderColor: "#FF4500",
     borderWidth: 2,
   },
@@ -210,13 +229,16 @@ const styles = StyleSheet.create({
     bottom: 140,
     left: 20,
     right: 20,
-    backgroundColor: "rgba(20, 20, 20, 0.9)",
-    borderRadius: 16,
+    backgroundColor: "rgba(15, 15, 15, 0.95)",
+    borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: "rgba(255, 69, 0, 0.3)",
+    borderColor: "rgba(255, 69, 0, 0.4)",
+    shadowColor: "#FF4500",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-  insightRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  insightRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   insightTitle: {
     color: "white",
     fontSize: 14,
@@ -224,12 +246,12 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   insightBody: {
-    color: "#ccc",
+    color: "#bbb",
     fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 12,
+    lineHeight: 19,
+    marginBottom: 15,
   },
-  statsRow: { flexDirection: "row", justifyContent: "flex-start", gap: 20 },
-  statLabel: { color: "#888", fontSize: 12 },
+  statsRow: { flexDirection: "row", gap: 25 },
+  statLabel: { color: "#777", fontSize: 12 },
   statVal: { color: "white", fontWeight: "bold" },
 });
