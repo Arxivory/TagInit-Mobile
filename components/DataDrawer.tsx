@@ -23,10 +23,6 @@ export const DataDrawer = ({
           </TouchableOpacity>
         ))}
       </View>
-
-      <TouchableOpacity style={styles.snapshotBtn} onPress={onSnapshot}>
-        <Text style={styles.snapshotText}>TAKE THERMAL SNAPSHOT</Text>
-      </TouchableOpacity>
     </View>
   );
 };
