@@ -17,8 +17,8 @@ MODEL_PATH = "./assets/models/urban_heat_model_quantized_v2.ptl"
 model = torch.jit.load(MODEL_PATH)
 model.eval()
 
-T_MIN = 15.0
-T_MAX = 39.0
+T_MIN = 28.0
+T_MAX = 42.0
 
 @app.post("/infer")
 async def infer(image: UploadFile = File(...),
