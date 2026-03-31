@@ -96,11 +96,17 @@ export default function App() {
 
   const getRecommendation = () => {
     const temp = parseFloat(stats.max);
+
     if (material === "ASPHALT" && temp > 45)
       return "Significant Heat Island risk. Recommend permeable paving.";
     if (material === "G.I. SHEET" && temp > 40)
       return "High conduction. Consider reflective coating (Cool Roof).";
+    if (material === "CONCRETE" && temp > 38)
+      return "Concrete heat absorption detected. Suggest lighter finishes.";
+    if (material === "GREEN ROOF")
+      return "Excellent mitigation. Encourage wider adoption.";
     if (temp < 35) return "Optimal thermal profile for this surface material.";
+
     return "Analyzing thermal patterns for urban mitigation...";
   };
 
