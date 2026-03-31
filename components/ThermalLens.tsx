@@ -103,8 +103,8 @@ export const ThermalLens = ({ heatmap, cameraRef, capturedImage }: Props) => {
 const styles = StyleSheet.create({
   svgOverlay: {
     position: "absolute",
-    top: "15%",
-    left: "5%",
+    top: "0%",
+    left: "0%",
     width: "90%",
     height: "60%",
   },
