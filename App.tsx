@@ -1,12 +1,15 @@
-import { useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Location from "expo-location";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 
 import { DataDrawer } from "./components/DataDrawer";
 import { TelemetryHeader } from "./components/TelemetryHeader";
 import { ThermalLens } from "./components/ThermalLens";
-import { captureThermalSnapshot } from "./utils/InferenceEngine";
+import {
+  captureThermalSnapshot,
+  runThermalInference,
+} from "./utils/InferenceEngine";
 import { getDummyThermalStats } from "./utils/physicsUtils";
 
 export default function App() {
@@ -14,6 +17,10 @@ export default function App() {
   const [stats, setStats] = useState(getDummyThermalStats());
   const [location, setLocation] = useState("Locating...");
   const [material, setMaterial] = useState("ASPHALT");
+
+  const [heatmap, setHeatmap] = useState<number[][] | undefined>(undefined);
+
+  const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
     if (!permission?.granted) requestPermission();
@@ -29,8 +36,43 @@ export default function App() {
     })();
   }, [permission]);
 
-  const handleSnapshot = () => {
-    captureThermalSnapshot(stats, location, material);
+  const handleSnapshot = async () => {
+    if (!cameraRef.current) {
+      Alert.alert("Error", "Camera not ready");
+      return;
+    }
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.5,
+        base64: false,
+      });
+
+      if (photo) {
+        const result = await runThermalInference(photo.uri, material, location);
+
+        if (result) {
+          setHeatmap(result.temperatureMap);
+          setStats((prevStats) => ({
+            current: result.maxTemp.toString(),
+            previous: prevStats.current,
+            max: result.maxTemp.toString(),
+            min: result.minTemp.toString(),
+            variance: (result.maxTemp - result.minTemp).toFixed(2),
+          }));
+
+          captureThermalSnapshot(result, location, material);
+        } else {
+          Alert.alert(
+            "Connection Error",
+            "Could not reach the ML server. Check your IP!",
+          );
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Snapshot Failed", "Check your Python terminal for errors.");
+    }
   };
 
   if (!permission?.granted)
@@ -38,7 +80,7 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <ThermalLens />
+      <ThermalLens heatmap={heatmap} cameraRef={cameraRef} />
 
       <View style={styles.overlay}>
         <TelemetryHeader

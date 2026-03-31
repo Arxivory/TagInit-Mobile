@@ -7,24 +7,42 @@ export interface InferenceResult {
   hazardLevel: "LOW" | "MEDIUM" | "CRITICAL";
 }
 
-const normalizeFrame = (frameData: any) => {
-  return frameData;
-};
+const SERVER_URL = `${process.env.EXPO_PUBLIC_API_URL}/infer`;
 
 export const runThermalInference = async (
-  rawFrame: any,
-): Promise<InferenceResult> => {
-  const baseTemp = 32 + Math.random() * 8;
+  imageUri: string,
+  material: string,
+  gps: string,
+): Promise<InferenceResult | null> => {
+  const formData = new FormData();
 
-  const maxTemp = Math.min(baseTemp + 5, 55);
-  const minTemp = baseTemp - 2;
+  formData.append("image", {
+    uri: imageUri,
+    name: "thermal_frame.jpg",
+    type: "image/jpeg",
+  } as any);
 
-  return {
-    temperatureMap: [[baseTemp]],
-    maxTemp,
-    minTemp,
-    hazardLevel: maxTemp > 40 ? "CRITICAL" : "MEDIUM",
-  };
+  formData.append("material", material);
+  formData.append("gps", gps);
+
+  try {
+    const response = await fetch(SERVER_URL, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    return {
+      temperatureMap: data.heatmap,
+      maxTemp: data.metadata.max_temp,
+      minTemp: data.metadata.min_temp,
+      hazardLevel: data.metadata.max_temp > 40 ? "CRITICAL" : "MEDIUM",
+    };
+  } catch (error) {
+    console.error("Cloud Inference Failed:", error);
+    return null;
+  }
 };
 
 export const getColorForTemp = (temp: number): string => {
@@ -45,8 +63,6 @@ export const captureThermalSnapshot = (
     material_context: material,
     thermal_data: stats,
   };
-
   console.log("SNAPSHOT SAVED:", snapshot);
-  alert(`Snapshot Saved for ${location}`);
   return snapshot;
 };
