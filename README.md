@@ -2,7 +2,7 @@
 
 **Physics-Informed Neural Networks for Urban Heat Mitigation**
 
-Tag-init is the mobile client for the **Tag-init Project**—a specialized tool designed to combat the **Urban Heat Island (UHI)** effect in Metro Manila. By leveraging edge-computing and mobile camera sensors, this application enables urban planners, community members, and researchers to capture real-time thermal snapshots and process them through our proprietary **Physics-Informed Neural Network (PINN)** pipeline.
+Tag-init is the mobile client for the **Tag-init Project**—a specialized tool designed to combat the **Urban Heat Island (UHI)** effect in Metro Manila. By leveraging edge-computing and mobile camera, this application enables urban planners, community members, and researchers to capture real-time thermal snapshots and process them through our proprietary **Physics-Informed Neural Network (PINN)** pipeline.
 
 ---
 
@@ -35,7 +35,7 @@ This application bridges the gap between raw optical photography and hyper-local
 ## Scientific Context
 
 Traditional satellite data at **100 m resolution** often averages out crucial urban heat signatures.  
-Tag-init implements a **spatial super-resolution pipeline** to bridge this gap. By inputting multi-spectral guidance into our PINN model, we deliver **10 m street-level resolution**, enabling identification of individual hot spots in the built environment.
+Tag-init implements a **spatial super-resolution pipeline** to bridge this gap. By inputting multi-spectral guidance into the PINN model, the system delivers a **10 m street-level resolution**, enabling identification of individual hot spots in the built environment.
 
 ---
 
